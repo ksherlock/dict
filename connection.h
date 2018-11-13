@@ -25,8 +25,6 @@ typedef struct Connection {
   ConnectionCallback displayPtr;
 } Connection;
 
-
-
 void ConnectionInit(Connection *, Word memID, ConnectionCallback displayPtr);
 
 Word ConnectionOpen(Connection *, const char *host, Word port);
@@ -35,6 +33,5 @@ Word ConnectionOpenGS(Connection *, const GSString255 *host, Word port);
 
 Word ConnectionClose(Connection *);
 Word ConnectionPoll(Connection *);
-
 
 #endif

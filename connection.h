@@ -32,6 +32,7 @@ Word ConnectionOpenC(Connection *, const char *host, Word port);
 Word ConnectionOpenGS(Connection *, const GSString255 *host, Word port);
 
 Word ConnectionClose(Connection *);
+Word ConnectionAbort(Connection *);
 Word ConnectionPoll(Connection *);
 
 #endif

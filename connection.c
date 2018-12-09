@@ -7,7 +7,6 @@
 
 #include "connection.h"
 #include <string.h>
-//#include "s16debug.h"
 
 static char pstring[256];
 
@@ -106,9 +105,6 @@ Word ConnectionPoll(Connection *buffer) {
     if (terr || _toolErr) {
       // CloseAndLogout(buffer);
 
-      // s16_debug_printf("terr = %04x tool error = %04x\n", terr, _toolErr);
-      // s16_debug_srbuff(&sr);
-
       TCPIPCloseTCP(buffer->ipid);
       TCPIPLogout(buffer->ipid);
       buffer->ipid = 0;
@@ -125,8 +121,6 @@ Word ConnectionPoll(Connection *buffer) {
     }
 
     if (sr.srState == TCPSCLOSED || sr.srState == TCPSTIMEWAIT) {
-
-      // s16_debug_srbuff(&sr);
 
       TCPIPLogout(buffer->ipid);
       buffer->ipid = 0;
@@ -227,8 +221,7 @@ Word ConnectionClose(Connection *buffer) {
     buffer->terr = TCPIPCloseTCP(buffer->ipid);
 
     if (buffer->displayPtr) {
-      static char message[] = "\pClosing connection: $0000";
-      Int2Hex(buffer->terr, message + 22, 4);
+      static char message[] = "\pClosing connection";
       buffer->displayPtr(message);
     }
     return 0;
@@ -245,5 +238,41 @@ Word ConnectionClose(Connection *buffer) {
     return 1;
   }
 
+  return -1;
+}
+
+Word ConnectionAbort(Connection *buffer) {
+  Word state = buffer->state;
+
+  buffer->state = 0;
+  switch(state) {
+    case kConnectionStateDNR:
+      TCPIPCancelDNR(&buffer->dnr);
+
+      if (buffer->displayPtr) {
+        static char message[] = "\pDNR lookup canceled";
+        buffer->displayPtr(message);
+      }
+      return 1;
+      break;
+
+    case kConnectionStateDisconnected:
+      return 1;
+      break;
+
+    case 0:
+      return -1;
+
+    default:
+      buffer->terr = TCPIPAbortTCP(buffer->ipid);
+      if (buffer->displayPtr) {
+        static char message[] = "\pClosing connection";
+        buffer->displayPtr(message);
+      }
+      TCPIPLogout(buffer->ipid);
+      buffer->ipid = 0;
+      return 1;
+
+  }
   return -1;
 }

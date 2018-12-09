@@ -1,0 +1,131 @@
+#include "Types.rez"
+#include "nda.h"
+
+resource rControlList (rWindow) {
+	{
+		rCtrlLE,
+		rCtrlDefine,
+		rCtrlTE,
+	}
+};
+
+resource rControlTemplate (rCtrlLE) {
+	rCtrlLE,
+	{10, 10, 23, 414},
+	editLineControl {
+		 {	/* optional Fields */
+			0x0,
+			0x7002,
+			0x1,
+			50,
+			0x1000D
+		}
+	}
+};
+
+resource rControlTemplate (rCtrlDefine) {
+	rCtrlDefine,
+	{10, 440, 23, 530},
+	SimpleButtonControl {
+		 {	/* optional Fields */
+			SquareShadowButton,
+			0x3002,
+			0x2,
+			0x1000C,
+			0x0,
+			{
+				"\n",
+				"\n",
+				0x0,
+				0x0
+			}
+		}
+	}
+};
+
+resource rControlTemplate (rCtrlTE) {
+	rCtrlTE,
+	{26, -2, 134, 544},
+	editTextControl {
+		 {	/* optional Fields */
+			0x0,
+			0x7400,
+			0x3,
+			0x27A80000,
+			{-1, -1, -1, -1},
+			0xFFFFFFFF,
+			0,
+			0x0,
+			0,
+			0x0,
+			0x15,
+			0x4,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0x0,
+			0x0,
+			0x0
+		}
+	}
+};
+
+/* Button title */
+resource rPString (0x1000C) {
+	"Define"
+};
+
+/* Line Edit text */
+resource rPString (0x1000D) {
+	""
+};
+
+/* Window title */
+resource rPString (0x1000E) {
+	"Dict"
+};
+
+resource rWindParam1 (rWindow) {
+	fClose + fTitle + fMove + fInfo, //0xC0B0,
+	0x1000E,
+	0x0,
+	{0, 0, 0, 0},
+	0x0, // rWindColor
+	{0, 0},
+	{0, 0},
+	{0, 0},
+	{0, 0},
+	{0, 0},
+	0x0,
+	13, // info height
+	{51, 48, 184, 590},
+	infront,
+	rWindow, // rControlList
+	0x209
+};
+
+/* TE Control text */
+resource rText (0x4) {
+	""
+};
+
+resource rComment (1) {
+	"Dict NDA\n\n"
+	"Written by Kelvin W Sherlock\n"
+	"November/December 2018."
+};
+
+resource rVersion (1) {
+	{
+		1,
+		0,
+		0,
+		alpha,
+		0
+	},
+	verUS,
+	"Dict",
+	"(C) 2018 Kelvin Sherlock "
+};

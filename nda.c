@@ -302,7 +302,7 @@ pascal void DrawInfo(Rect *rect, const char *str, GrafPortPtr w) {
   SetBackColor(0x0f);
   EraseRect(rect);
   if (str) {
-    MoveTo(/*8, 22*/ rect->h1 + 2, rect->v1 + 2);
+    MoveTo(/*8, 22*/ rect->h1 + 10, rect->v1 + 9);
     DrawString(str);
   }
 }
@@ -310,6 +310,11 @@ pascal void DrawInfo(Rect *rect, const char *str, GrafPortPtr w) {
 void DrawWindow(void) { DrawControls(GetPort()); }
 
 #pragma databank 0
+
+void MakeCtlTargetByID(GrafPortPtr window, Long resID) {
+	CtlRecHndl h = GetCtlHandleFromID(window, resID);
+	if (h) MakeThisCtlTarget(h); 
+}
 
 void NDAInit(Word code) {
   if (code) {
@@ -319,6 +324,7 @@ void NDAInit(Word code) {
 
     MyID = MMStartUp();
     ipid = 0;
+    st = st_none;
   } else {
     if (ToolsLoaded)
       NDAShutDownTools(&ss);
@@ -365,11 +371,18 @@ GrafPortPtr NDAOpen(void) {
                           rWindParam1);
 
     SetInfoDraw(DrawInfo, MyWindow);
+    UpdateStatus(0);
+
     AcceptRequests(ReqName, MyID, &HandleRequest);
+
+
+    MakeCtlTargetByID(MyWindow, rCtrlLE);
 
     SetSysWindow(MyWindow);
     ShowWindow(MyWindow);
     SelectWindow(MyWindow);
+
+
 
     ConnectionInit(&connection, MyID, MarinettiCallback);
 

@@ -342,7 +342,7 @@ int main(int argc, char **argv) {
     exit(1);
 
   if (mf < 0) {
-    fprintf(stderr, "Marinetti 3.0b3 or greater is required.\n");
+    fprintf(stderr, "Marinetti 3.0b11 or greater is required.\n");
     exit(1);
   }
 

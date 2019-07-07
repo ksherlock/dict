@@ -379,9 +379,9 @@ GrafPortPtr NDAOpen(void) {
     ToolsLoaded = true;
   }
 
-  if (TCPIPLongVersion() < 0x03006010) {
+  if (TCPIPLongVersion() < 0x03006011) {
     AlertWindow(awCString, NULL,
-                (Ref) "24~Marinetti 3.0b10 or newer required.~^Ok");
+                (Ref) "24~Marinetti 3.0b11 or newer required.~^Ok");
     return NULL;
   }
 

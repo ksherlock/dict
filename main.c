@@ -19,6 +19,9 @@
 
 #define BusyFlag ((byte *)0xE100FFl)
 
+
+unsigned d_flag = 0;
+
 // startup/shutdown flags.
 enum {
   kLoaded = 1,
@@ -96,6 +99,8 @@ void ShutDownTCP(int flags, Boolean force, displayPtr fx) {
 pascal void DisplayCallback(const char *message) {
   unsigned length;
 
+  if (!d_flag) return;
+
   // message is a p-string.
   length = message ? message[0] : 0;
   if (!length)
@@ -115,7 +120,7 @@ int ConnectLoop(char *host, Word port, Connection *connection) {
   qtick = GetTick() + 30 * 60;
   while (!ConnectionPoll(connection)) {
     if (GetTick() >= qtick) {
-      fprintf(stderr, "Connection timed out.\n");
+      fputs("Connection timed out.\n", stderr);
 
       IncBusy();
       TCPIPAbortTCP(connection->ipid);
@@ -167,7 +172,7 @@ int ReadLineSync(word ipid) {
     if (terr)
       return -1;
     if (GetTick() >= qtick) {
-      fprintf(stderr, "Read timed out.\n");
+      fputs("Read timed out.\n", stderr);
       return -1;
     }
   }
@@ -178,7 +183,7 @@ int ReadLineSync(word ipid) {
     if (!rlr.rlrIsDataFlag) {
 
       if (GetTick() >= qtick) {
-        fprintf(stderr, "Read timed out.\n");
+        fputs("Read timed out.\n", stderr);
         return -1;
       }
       TCPIPPoll();
@@ -194,7 +199,7 @@ int ReadLineSync(word ipid) {
 int status(void) {
   unsigned x;
   if (sscanf(buffer, "%u", &x) == 1) {
-    fprintf(stderr, "status: %d\n", x);
+    if (d_flag) fprintf(stderr, "status: %d\n", x);
     return x;
   }
   return -1;
@@ -317,11 +322,11 @@ int define(Word ipid, const char *term, const char *dict) {
     return -1;
 
   case 550:
-    fprintf(stdout, "Invalid database.\n");
+    fputs("Invalid database.\n", stderr);
     return -1;
 
   case 552:
-    fprintf(stdout, "No match.\n");
+    fputs("No match.\n", stderr);
     return 0;
 
   case 150:
@@ -336,13 +341,31 @@ int main(int argc, char **argv) {
   int ok;
   word terr;
 
+
+  --argc;
+  ++argv;
+
+  d_flag = 0;
+  for (; argc; --argc, ++argv) {
+    unsigned char c = **argv;
+    if (c != '-') break;
+
+    if (!strcmp(*argv, "-d")) {
+      d_flag = 1;
+      continue;
+    }
+
+  }
+
+  if (argc < 1) {
+    fputs("Usage: dict [-d] word...\n", stderr);
+    exit(1);
+  }
+
   mf = StartUpTCP(DisplayCallback);
 
-  if (argc < 1)
-    exit(1);
-
   if (mf < 0) {
-    fprintf(stderr, "Marinetti 3.0b11 or greater is required.\n");
+    fputs("Marinetti 3.0b11 or greater is required.\n", stderr);
     exit(1);
   }
 
@@ -353,7 +376,7 @@ int main(int argc, char **argv) {
 
     ok = client(connection.ipid);
     if (ok == 0) {
-      for (i = 1; i < argc; ++i) {
+      for (i = 0; i < argc; ++i) {
         ok = define(connection.ipid, argv[i], NULL);
         if (ok < 0)
           break;

@@ -24,6 +24,15 @@
 #include "connection.h"
 #include "nda.h"
 
+
+/*
+ * TODO:
+ * [ ] store definition in handle, put into TE control when finished?
+ * [ ] {text} -> drop {}, use dark blue text color.
+ *
+ */
+
+
 unsigned NDAStartUpTools(Word memID, StartStopRecord *ssRef);
 void NDAShutDownTools(StartStopRecord *ssRef);
 
@@ -42,6 +51,10 @@ Word ipid;
 Word FlagTCP;
 Word ToolsLoaded;
 GrafPortPtr MyWindow;
+
+Handle TextHandle;
+LongWord TextHandleSize;
+LongWord TextHandleUsed;
 
 static StartStopRecord ss = {0,
                              0,
@@ -83,26 +96,53 @@ pascal void MarinettiCallback(char *str);
 void EnableControls(void);
 void DisableControls(void);
 
-void InsertString(word length, char *cp) {
+
+void AppendText(word length, char *cp) {
+
+  Handle h = TextHandle;
+  LongWord size;
+
+  size = TextHandleUsed + length;
+  if (size > TextHandleSize) {
+    size += 4095;
+    size &= 4096;
+
+    if (h) {
+      HUnlock(h);
+      SetHandleSize(size, h);
+      if (_toolErr) return;
+      HLock(h);
+      TextHandleSize = size;
+    } else {
+      TextHandle = h = NewHandle(size, MyID, attrLocked, 0);
+      if (_toolErr) return;
+      TextHandleSize = size;
+    }
+    HLock(h);
+  }
+  BlockMove(cp, *h + TextHandleUsed, length);
+  TextHandleUsed += length;
+}
+
+void SetText(void) {
   Handle handle;
-  // TERecord **temp;
+  TERecord *temp;
   longword oldStart, oldEnd;
 
   handle = (Handle)GetCtlHandleFromID(MyWindow, rCtrlTE);
-  // temp = (TERecord **)handle;
+  temp = *(TERecord **)handle;
 
-  //(**temp).textFlags &= (~fReadOnly);
-
-  TEGetSelection((pointer)&oldStart, (pointer)&oldEnd, handle);
+  temp->textFlags &= (~fReadOnly);
 
   TESetSelection((Pointer)-1, (Pointer)-1, handle);
-  TEInsert(teDataIsTextBlock, (Ref)cp, length, NULL, NULL, /* no style info */
-           handle);
+  TESetText(teDataIsTextBlock, (Ref)*TextHandle, TextHandleUsed, NULL, NULL, handle);
+  temp->textFlags |= fReadOnly;
 
-  //(**temp).textFlags |= fReadOnly;
 
-  TESetSelection((Pointer)oldStart, (Pointer)oldEnd, handle);
+  TextHandleUsed = 0;
 }
+
+
 
 static char buffer[512];
 
@@ -130,12 +170,18 @@ void TCPLoop(void) {
 
   case st_connect:
     x = ConnectionPoll(&connection);
-    switch (x) {
+    switch (connection.state) {
     case kConnectionStateConnected:
+      MarinettiCallback("\pConnected.");
       ++st;
       break;
     case kConnectionStateDisconnected:
+      MarinettiCallback("\pDisconnected.");
+      EnableControls();
+      st = st_none;
+      break;
     case kConnectionStateError:
+      MarinettiCallback("\pConnection Error.");
       EnableControls();
       st = st_none;
       break;
@@ -143,7 +189,7 @@ void TCPLoop(void) {
     return;
   case st_disconnect:
     x = ConnectionPoll(&connection);
-    switch (x) {
+    switch (connection.state) {
     case kConnectionStateDisconnected:
     case kConnectionStateError:
       EnableControls();
@@ -152,6 +198,7 @@ void TCPLoop(void) {
     }
     return;
 
+redo:
   case st_login:
   case st_client:
   case st_define1:
@@ -171,6 +218,8 @@ void TCPLoop(void) {
     /* all data should be \r\n delimited. we want to keep the \r */
     terr = TCPIPReadLineTCP(ipid, "\p\n", 0x0000, (Ref)&buffer,
                             sizeof(buffer) - 2, &rlr);
+
+    if (terr) return;
     if (!rlr.rlrIsDataFlag)
       return;
   	qtick += 60 * 15; /* bump timeout */
@@ -185,7 +234,6 @@ void TCPLoop(void) {
       ++x;
     }
     buffer[x] = 0;
-    ++x;
     rlr.rlrBuffCount = x;
 
     if (st != st_define3) {
@@ -193,7 +241,7 @@ void TCPLoop(void) {
       status = 0;
       for (i = 0;; ++i) {
         unsigned c = buffer[i];
-        if (isdigit(x)) {
+        if (isdigit(c)) {
           status *= 10;
           status += c - '0';
           continue;
@@ -238,7 +286,8 @@ void TCPLoop(void) {
       MarinettiCallback("\pNo match");
       st = st_idle;
     } else {
-      InsertString(rlr.rlrBuffCount, buffer);
+      AppendText(rlr.rlrBuffCount, buffer);
+      SetText();
       st = st_idle;
     }
     EnableControls();
@@ -251,6 +300,7 @@ void TCPLoop(void) {
     else if (status == 250) {
       st = st_idle;
   	  qtick = GetTick() + 60 * 60 * 2; /* 2-minute timeout */
+      SetText();
       EnableControls();
     } else {
     }
@@ -258,13 +308,14 @@ void TCPLoop(void) {
   case st_define3:
     /* expect definition text. '.' terminates. */
     if (buffer[0] == '.') {
-      InsertString(rlr.rlrBuffCount - 1, buffer + 1);
+      AppendText(rlr.rlrBuffCount - 1, buffer + 1);
       if (buffer[1] == '\r') {
         --st;
       }
     } else {
-      InsertString(rlr.rlrBuffCount, buffer);
+      AppendText(rlr.rlrBuffCount, buffer);
     }
+    goto redo;
     break;
 
   case st_quit:
@@ -365,11 +416,21 @@ void NDAClose(void) {
   MyWindow = NULL;
 
   NDAResourceShutDown(&resInfo);
+
+  if (TextHandle) {
+    DisposeHandle(TextHandle);
+    TextHandle = NULL;
+    TextHandleUsed = 0;
+    TextHandleSize = 0;
+  }
 }
 
 GrafPortPtr NDAOpen(void) {
 
   MyWindow = NULL;
+  TextHandle = NULL;
+  TextHandleSize = 0;
+  TextHandleSize = 0;
 
   if (!ToolsLoaded) {
     if (NDAStartUpTools(MyID, &ss)) {

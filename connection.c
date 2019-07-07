@@ -182,7 +182,7 @@ Word ConnectionOpen(Connection *buffer, const char *host, Word port) {
   if (buffer->displayPtr) {
     static char message[256] = "\pDNR lookup: ";
     BlockMove(host + 1, message + 13, host[0]);
-    message[0] = 13 + host[0];
+    message[0] = 12 + host[0];
     buffer->displayPtr(message);
   }
 

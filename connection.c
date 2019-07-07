@@ -30,7 +30,7 @@ static Word LoginAndOpen(Connection *buffer) {
     Int2Dec(buffer->port, message + length, 5, 0);
     length += 5;
     message[length] = 0;
-    message[0] = length;
+    message[0] = length - 1;
     buffer->displayPtr(message);
   }
 
@@ -113,8 +113,8 @@ Word ConnectionPoll(Connection *buffer) {
       return -1;
     }
 
-    if (sr.srState ==
-        TCPSESTABLISHED) //  && state == kConnectionStateConnecting)
+    /* && state == kConnectionStateConnecting */
+    if (sr.srState == TCPSESTABLISHED)
     {
       buffer->state = kConnectionStateConnected;
       return 1;

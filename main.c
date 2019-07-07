@@ -48,8 +48,8 @@ int StartUpTCP(displayPtr fx) {
     flags |= kLoaded;
   }
 
-  // require 3.0b3
-  if (TCPIPLongVersion() < 0x03006003) {
+  // require 3.0b11
+  if (TCPIPLongVersion() < 0x03006011) {
     if (flags & kLoaded)
       UnloadOneTool(54);
 
@@ -174,7 +174,7 @@ int ReadLineSync(word ipid) {
   for (;;) {
     terr = TCPIPReadLineTCP(ipid, "\p\r\n", 0x0000, (Ref)&buffer,
                             sizeof(buffer) - 1, &rlr);
-    /* if (terr) return -1; */ /* nb - marinetti return bug */
+    if (terr) return -1; /* nb - marinetti < 3.0b11 return value inaccurate */
     if (!rlr.rlrIsDataFlag) {
 
       if (GetTick() >= qtick) {

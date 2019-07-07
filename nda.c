@@ -19,6 +19,7 @@
 #include <quickdraw.h>
 
 #include <ctype.h>
+#include <stdio.h>
 
 #include "connection.h"
 #include "nda.h"
@@ -61,7 +62,7 @@ static Connection connection;
 
 enum {
   st_none,
-  st_init,
+  st_idle,
   st_connect,
   st_login,
   st_client,
@@ -75,6 +76,12 @@ enum {
 static unsigned st = 0;
 static LongWord qtick = 0;
 const char *ReqName = "\pTCP/IP~kelvin~dict~";
+
+int define(Word ipid, const char *dict);
+pascal void MarinettiCallback(char *str);
+
+void EnableControls(void);
+void DisableControls(void);
 
 void InsertString(word length, char *cp) {
   Handle handle;
@@ -108,7 +115,18 @@ void TCPLoop(void) {
   unsigned x;
   int status;
 
+  Word ipid = connection.ipid;
+
   switch (st) {
+
+  case st_idle:
+  	if (GetTick() >= qtick) {
+  		TCPIPWriteTCP(ipid, "QUIT\r\n", 6, 1, 0);
+  		qtick = GetTick() + 60 * 30;
+  		st = st_quit;
+  		return;
+	}
+	break;
 
   case st_connect:
     x = ConnectionPoll(&connection);
@@ -118,6 +136,7 @@ void TCPLoop(void) {
       break;
     case kConnectionStateDisconnected:
     case kConnectionStateError:
+      EnableControls();
       st = st_none;
       break;
     }
@@ -126,9 +145,8 @@ void TCPLoop(void) {
     x = ConnectionPoll(&connection);
     switch (x) {
     case kConnectionStateDisconnected:
-      st = st_none;
-      break;
     case kConnectionStateError:
+      EnableControls();
       st = st_none;
       break;
     }
@@ -155,7 +173,7 @@ void TCPLoop(void) {
                             sizeof(buffer) - 2, &rlr);
     if (!rlr.rlrIsDataFlag)
       return;
-
+  	qtick += 60 * 15; /* bump timeout */
     /* ensure a trailing \r and 0 */
     x = rlr.rlrBuffCount;
     if (x) {
@@ -205,6 +223,7 @@ void TCPLoop(void) {
     if (status == 250) {
       ++st;
       /* send define string... */
+      define(ipid, NULL);
     }
     /* else error */
     break;
@@ -216,20 +235,24 @@ void TCPLoop(void) {
     }
 
     if (status == 552) {
-      InsertString(10, "No match\r");
-      st = st_none;
+      MarinettiCallback("\pNo match");
+      st = st_idle;
     } else {
       InsertString(rlr.rlrBuffCount, buffer);
-      st = st_none;
+      st = st_idle;
     }
+    EnableControls();
+  	qtick = GetTick() + 60 * 60 * 2; /* 2-minute timeout */
     break;
   case st_define2:
     /* expect 151 */
     if (status == 151)
       ++st;
-    else if (status == 250)
-      st = st_none;
-    else {
+    else if (status == 250) {
+      st = st_idle;
+  	  qtick = GetTick() + 60 * 60 * 2; /* 2-minute timeout */
+      EnableControls();
+    } else {
     }
     break;
   case st_define3:
@@ -392,6 +415,86 @@ GrafPortPtr NDAOpen(void) {
   return NULL;
 }
 
+
+static char word_to_define[256];
+int define(Word ipid, const char *dict) {
+  word terr;
+  int ok;
+  unsigned x;
+  static char buffer[512];
+
+  if (!dict || !*dict)
+    dict = "!";
+
+
+  x = sprintf(buffer, "DEFINE %s \"%b\"\r\n", dict, word_to_define);
+
+  terr = TCPIPWriteTCP(ipid, buffer, x, 1, 0);
+  return 0;
+}
+
+
+void DoDefine(void) {
+
+	unsigned i;
+	Handle handle;
+
+
+	handle = (Handle)GetCtlHandleFromID(MyWindow, rCtrlTE);
+
+	TESetText(teDataIsTextBlock, (Ref)"", 0, NULL, NULL, handle);
+
+	GetLETextByID(MyWindow, rCtrlLE, (StringPtr)word_to_define);
+
+	i = word_to_define[0];
+	while (i && isspace(word_to_define[i])) --i;
+	if (!i) return;
+	word_to_define[0] = i;
+	word_to_define[i+1] = 0;
+
+
+	/* considerations:
+	   1. is the network connected?
+	   2. is a tcp connection already established?
+	 */
+
+	if (!FlagTCP) {
+
+		MarinettiCallback("\pConnecting to network...");
+		TCPIPConnect(MarinettiCallback);
+		if (!FlagTCP) return;
+	}
+
+	qtick = GetTick() + 30 * 60;
+
+	DisableControls();
+
+	switch(st) {
+		case st_idle:
+			define(connection.ipid, NULL);
+			st = st_define1;
+			break;
+		default:
+			ConnectionAbort(&connection);
+		case st_none:
+			ConnectionOpenC(&connection, "dict.org", 2628);
+			st = st_connect;
+			break;	
+
+
+	}
+}
+
+void EnableControls(void) {
+	HiliteCtlByID(noHilite, MyWindow, rCtrlLE);
+	HiliteCtlByID(noHilite, MyWindow, rCtrlDefine);
+}
+
+void DisableControls(void) {
+	HiliteCtlByID(inactiveHilite, MyWindow, rCtrlLE);
+	HiliteCtlByID(inactiveHilite, MyWindow, rCtrlDefine);
+}
+
 word NDAAction(void *param, int code) {
   word eventCode;
   static EventRecord event = {0};
@@ -416,10 +519,9 @@ word NDAAction(void *param, int code) {
     case wInControl:
       switch (event.wmTaskData4) {
       /* start marinetti */
-      case rCtrlDefine: {
-
+      case rCtrlDefine:
+      	DoDefine();
         break;
-      }
       }
       // todo - Command-A selects all.
     }

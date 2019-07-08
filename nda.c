@@ -25,12 +25,10 @@
 #include "nda.h"
 
 
-/*
- * TODO:
- * [ ] store definition in handle, put into TE control when finished?
- * [ ] {text} -> drop {}, use dark blue text color.
- *
- */
+#define TBBlack "\x01" "C" "\x00\x00"
+#define TBBlue "\x01" "C" "\x11\x11"
+#define TBRed "\x01" "C" "\x44\x44"
+
 
 
 unsigned NDAStartUpTools(Word memID, StartStopRecord *ssRef);
@@ -124,19 +122,44 @@ void AppendText(word length, char *cp) {
   TextHandleUsed += length;
 }
 
+
+void AppendText2(word length, char *cp) {
+
+  unsigned i;
+  unsigned char c;
+  unsigned start = 0;
+  for (i = 0; i < length; ++i) {
+    c = cp[i];
+
+    if (c == '{' || c == '}' || c == 0x01) {
+
+      /* flush any pending data */
+      if (start < i)
+        AppendText(i - start, cp + start);
+
+      if (c == '{') AppendText(4, TBBlue);
+      if (c == '}') AppendText(4, TBBlack);
+      start = i + 1;
+    }
+  }
+  if (start < length)
+    AppendText(length - start, cp + start);
+
+}
+
 void SetText(void) {
   Handle handle;
-  TERecord *temp;
+  //TERecord *temp;
   longword oldStart, oldEnd;
 
   handle = (Handle)GetCtlHandleFromID(MyWindow, rCtrlTE);
-  temp = *(TERecord **)handle;
+  //temp = *(TERecord **)handle;
 
-  temp->textFlags &= (~fReadOnly);
+  //temp->textFlags &= (~fReadOnly);
 
   TESetSelection((Pointer)-1, (Pointer)-1, handle);
-  TESetText(teDataIsTextBlock, (Ref)*TextHandle, TextHandleUsed, NULL, NULL, handle);
-  temp->textFlags |= fReadOnly;
+  TESetText(teDataIsTextBox2|teTextIsPtr, (Ref)*TextHandle, TextHandleUsed, NULL, NULL, handle);
+  //temp->textFlags |= fReadOnly;
 
 
   TextHandleUsed = 0;
@@ -279,6 +302,7 @@ redo:
     /* expect 550, 552, or 150 status */
     if (status == 150) {
       ++st;
+      AppendText(4, TBBlack);
       break;
     }
 
@@ -286,6 +310,7 @@ redo:
       MarinettiCallback("\pNo match");
       st = st_idle;
     } else {
+      AppendText(4, TBRed);
       AppendText(rlr.rlrBuffCount, buffer);
       SetText();
       st = st_idle;
@@ -313,7 +338,7 @@ redo:
         --st;
       }
     } else {
-      AppendText(rlr.rlrBuffCount, buffer);
+      AppendText2(rlr.rlrBuffCount, buffer);
     }
     goto redo;
     break;

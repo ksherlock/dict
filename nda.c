@@ -49,6 +49,8 @@ Word ipid;
 Word FlagTCP;
 Word ToolsLoaded;
 GrafPortPtr MyWindow;
+Handle TECtrlHandle;
+
 
 Handle TextHandle;
 LongWord TextHandleSize;
@@ -148,18 +150,10 @@ void AppendText2(word length, char *cp) {
 }
 
 void SetText(void) {
-  Handle handle;
-  //TERecord *temp;
   longword oldStart, oldEnd;
 
-  handle = (Handle)GetCtlHandleFromID(MyWindow, rCtrlTE);
-  //temp = *(TERecord **)handle;
-
-  //temp->textFlags &= (~fReadOnly);
-
-  TESetSelection((Pointer)-1, (Pointer)-1, handle);
-  TESetText(teDataIsTextBox2|teTextIsPtr, (Ref)*TextHandle, TextHandleUsed, NULL, NULL, handle);
-  //temp->textFlags |= fReadOnly;
+  TESetSelection((Pointer)-1, (Pointer)-1, TECtrlHandle);
+  TESetText(teDataIsTextBox2|teTextIsPtr, (Ref)*TextHandle, TextHandleUsed, NULL, NULL, TECtrlHandle);
 
 
   TextHandleUsed = 0;
@@ -439,6 +433,7 @@ void NDAClose(void) {
 
   CloseWindow(MyWindow);
   MyWindow = NULL;
+  TECtrlHandle = NULL;
 
   NDAResourceShutDown(&resInfo);
 
@@ -491,7 +486,7 @@ GrafPortPtr NDAOpen(void) {
     ShowWindow(MyWindow);
     SelectWindow(MyWindow);
 
-
+    TECtrlHandle = (Handle)GetCtlHandleFromID(MyWindow, rCtrlTE);
 
     ConnectionInit(&connection, MyID, MarinettiCallback);
 

@@ -51,7 +51,7 @@ resource rControlTemplate (rCtrlTE) {
 			0x0,
 			0x7400,
 			0x3,
-			0x27A80000,
+			fReadOnly+fTabSwitch+fDrawBounds+fDrawInactiveSelection,
 			{-1, -1, -1, -1},
 			0xFFFFFFFF,
 			0,

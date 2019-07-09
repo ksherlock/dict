@@ -114,7 +114,7 @@ resource rText (0x4) {
 resource rComment (1) {
 	"Dict NDA\n\n"
 	"Written by Kelvin W Sherlock\n"
-	"November/December 2018."
+	"2018-2019"
 };
 
 resource rVersion (1) {
@@ -127,5 +127,5 @@ resource rVersion (1) {
 	},
 	verUS,
 	"Dict",
-	"(C) 2018 Kelvin Sherlock "
+	"(C) 2018-2019 Kelvin Sherlock "
 };

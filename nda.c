@@ -357,6 +357,7 @@ redo:
     /* expect 221 but doesn't really matter... */
     ConnectionClose(&connection);
     st = st_disconnect;
+    MarinettiCallback("\pDisconnecting...");
     break;
   }
 }

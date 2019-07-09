@@ -84,6 +84,7 @@ enum {
   st_define2,
   st_define3,
   st_quit,
+  st_force_quit,
   st_disconnect,
 };
 
@@ -178,13 +179,13 @@ void TCPLoop(void) {
   switch (st) {
 
   case st_idle:
-  	if (GetTick() >= qtick) {
-  		TCPIPWriteTCP(ipid, "QUIT\r\n", 6, 1, 0);
-  		qtick = GetTick() + 60 * 30;
-  		st = st_quit;
-  		return;
-	}
-	break;
+  	if (GetTick() < qtick) break;
+  case st_force_quit:
+    TCPIPWriteTCP(ipid, "QUIT\r\n", 6, 1, 0);
+    qtick = GetTick() + 60 * 30;
+    st = st_quit;
+    return;
+  	break;
 
   case st_connect:
     x = ConnectionPoll(&connection);
@@ -281,8 +282,10 @@ redo:
     if (status == 220) {
       ++st;
       terr = TCPIPWriteTCP(ipid, "CLIENT dict-nda-iigs\r\n", 22, 1, 0);
+    } else {
+      MarinettiCallback("\pLogin Error");
+      st = st_force_quit;
     }
-    /* else error... */
     break;
   case st_client:
     /* expect 250 status */
@@ -290,14 +293,19 @@ redo:
       ++st;
       /* send define string... */
       define(ipid, NULL);
+    } else {
+      MarinettiCallback("\pClient Error");
+      AppendText(4, TBRed);
+      AppendText(rlr.rlrBuffCount, buffer);
+      SetText();
+      st = st_force_quit;
     }
-    /* else error */
     break;
   case st_define1:
     /* expect 550, 552, or 150 status */
     if (status == 150) {
       ++st;
-      AppendText(4, TBBlack);
+      MarinettiCallback("\pReceiving...");
       break;
     }
 
@@ -305,6 +313,7 @@ redo:
       MarinettiCallback("\pNo match");
       st = st_idle;
     } else {
+      MarinettiCallback("\pServer Error");
       AppendText(4, TBRed);
       AppendText(rlr.rlrBuffCount, buffer);
       SetText();
@@ -315,14 +324,20 @@ redo:
     break;
   case st_define2:
     /* expect 151 */
-    if (status == 151)
+    if (status == 151) {
       ++st;
-    else if (status == 250) {
+    } else if (status == 250) {
       st = st_idle;
   	  qtick = GetTick() + 60 * 60 * 2; /* 2-minute timeout */
       SetText();
       EnableControls();
+      MarinettiCallback("\pConnected");
     } else {
+      MarinettiCallback("\pServer Error");
+      AppendText(4, TBRed);
+      AppendText(rlr.rlrBuffCount, buffer);
+      SetText();
+      st = st_idle;
     }
     break;
   case st_define3:
@@ -348,12 +363,9 @@ redo:
 
 // activate/inactivate controls based on Marinetti status
 void UpdateStatus(Boolean redraw) {
-  if (FlagTCP) // TCP started
-  {
-
+  if (FlagTCP) {
     SetInfoRefCon((LongWord) "\pNetwork Connected", MyWindow);
   } else {
-
     SetInfoRefCon((LongWord) "\pNetwork Disconnected", MyWindow);
   }
   if (redraw)

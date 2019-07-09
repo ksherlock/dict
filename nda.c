@@ -191,16 +191,16 @@ void TCPLoop(void) {
     x = ConnectionPoll(&connection);
     switch (connection.state) {
     case kConnectionStateConnected:
-      MarinettiCallback("\pConnected.");
+      MarinettiCallback("\pConnected");
       ++st;
       break;
     case kConnectionStateDisconnected:
-      MarinettiCallback("\pDisconnected.");
+      MarinettiCallback("\pDisconnected");
       EnableControls();
       st = st_none;
       break;
     case kConnectionStateError:
-      MarinettiCallback("\pConnection Error.");
+      MarinettiCallback("\pConnection Error");
       EnableControls();
       st = st_none;
       break;
@@ -211,6 +211,7 @@ void TCPLoop(void) {
     switch (connection.state) {
     case kConnectionStateDisconnected:
     case kConnectionStateError:
+      MarinettiCallback("\pDisconnected");
       EnableControls();
       st = st_none;
       break;
@@ -231,6 +232,9 @@ redo:
     if (sr.srRcvQueued == 0) {
       if (GetTick() >= qtick) {
         /* timeout */
+        MarinettiCallback("\pTimed out");
+        ConnectionClose(&connection);
+        st = st_disconnect;
       }
       return;
     }
@@ -238,6 +242,7 @@ redo:
     terr = TCPIPReadLineTCP(ipid, "\p\n", 0x0000, (Ref)&buffer,
                             sizeof(buffer) - 2, &rlr);
 
+    if (terr == tcperrConClosing) terr = 0;
     if (terr) return;
     if (!rlr.rlrIsDataFlag)
       return;

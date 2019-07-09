@@ -1,4 +1,4 @@
-#pragma nda NDAOpen NDAClose NDAAction NDAInit 30 0xffff "--Dictionary\\H**"
+#pragma nda NDAOpen NDAClose NDAAction NDAInit 15 0xffff "--Dictionary\\H**"
 #pragma lint - 1
 #pragma optimize - 1
 
@@ -17,6 +17,7 @@
 #include <intmath.h>
 #include <misctool.h>
 #include <quickdraw.h>
+#include <lineedit.h>
 
 #include <ctype.h>
 #include <stdio.h>

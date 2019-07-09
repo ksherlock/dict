@@ -116,7 +116,7 @@ void AppendText(word length, char *cp) {
       HLock(h);
       TextHandleSize = size;
     } else {
-      TextHandle = h = NewHandle(size, MyID, attrLocked, 0);
+      TextHandle = h = NewHandle(size, MyID, attrLocked|attrNoSpec, 0);
       if (_toolErr) return;
       TextHandleSize = size;
     }

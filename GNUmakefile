@@ -2,6 +2,13 @@
 BIN_OBJ = o/main.a o/connection.a
 NDA_OBJ = o/nda.a o/connection.a o/tools.a
 
+.PHONY: all clean clobber
+all : dict dict.nda
+clean:
+	$(RM) -r o
+clobber : clean
+	$(RM) dict dict.nda
+
 dict : $(BIN_OBJ)
 	iix link o/main o/connection keep=$@
 

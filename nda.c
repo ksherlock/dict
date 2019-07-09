@@ -589,15 +589,71 @@ void DisableControls(void) {
 	HiliteCtlByID(inactiveHilite, MyWindow, rCtrlDefine);
 }
 
+
+void EditKeys(Word key, Handle target, LongWord targetID) {
+
+  LERecHndl le;
+  
+  if (!target) {
+    target = (Handle)FindTargetCtl();
+    if (!target) return;
+    targetID = GetCtlID((CtlRecHndl)target);
+  }
+
+  le = (LERecHndl)(*(CtlRecHndl)target)->ctlData;
+
+  switch (key) {
+    case 'a':
+    case 'A':
+      if (targetID == rCtrlTE) {
+        LongWord start = 0;
+        LongWord end = 0;
+        TEGetTextInfo((Pointer)&end, 1, TECtrlHandle);
+        TESetSelection((Pointer)start, (Pointer)end, TECtrlHandle);    
+      } else if (targetID == rCtrlLE) {
+        Word len = LEGetTextLen(le);
+        LESetSelect(0, len, le);        
+      }
+      break;
+    case 'c':
+    case 'C':
+      if (targetID == rCtrlTE) {
+        TECopy(target);
+      }
+      if (targetID == rCtrlLE) {
+        LECopy(le);
+      }
+      break;
+    case 'v':
+    case 'V':
+      if (targetID == rCtrlLE)
+        LEPaste(le);
+      break;
+    case 'x':
+    case 'X':
+      if (targetID == rCtrlLE)
+        LECut(le);
+      break;
+    case 'k':
+      if (targetID == rCtrlLE)
+        LEDelete(le);
+      break;
+  }
+
+
+}
+
 word NDAAction(void *param, int code) {
   word eventCode;
   static EventRecord event = {0};
-
+  Handle target = NULL;
   if (code == runAction) {
     if (st)
       TCPLoop();
     return 1;
   }
+
+
 
   else if (code == eventAction) {
     BlockMove((Pointer)param, (Pointer)&event, 16);
@@ -611,17 +667,40 @@ word NDAAction(void *param, int code) {
       break;
 
     case wInControl:
-      switch (event.wmTaskData4) {
-      /* start marinetti */
+      target = (Handle)event.wmTaskData2;
+      switch ((Word)event.wmTaskData4) {
       case rCtrlDefine:
       	DoDefine();
         break;
+      case rCtrlTE:
+      case rCtrlLE:
+        /* check for control-C, control-A */
+        if (event.what != keyDownEvt) break;
+        if (!(event.modifiers & 0x0100)) break;
+
+        EditKeys(event.message, (Handle)event.wmTaskData2, event.wmTaskData4);
+        break;
       }
-      // todo - Command-A selects all.
+      break;
+
+    case keyDownEvt:
+      /* line-edit needs to be handled here */
+      if (!(event.modifiers & 0x0100)) break;
+      EditKeys(event.message, 0, 0);
+
+      break;
     }
   } else if (code == copyAction) {
-    TECopy(NULL);
+    EditKeys('c', 0, 0);
     return 1; // yes we handled it.
+  } else if (code == pasteAction) {
+    EditKeys('v', 0, 0);
+    return 1; // yes we handled it.
+  } else if (code == cutAction) {
+    EditKeys('x', 0, 0);
+    return 1; // yes we handled it.
+  } else if (code == clearAction) {
+    EditKeys('k', 0, 0);
   }
 
   return 0;

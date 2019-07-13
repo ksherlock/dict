@@ -107,7 +107,7 @@ void AppendText(word length, char *cp) {
   size = TextHandleUsed + length;
   if (size > TextHandleSize) {
     size += 4095;
-    size &= 4096;
+    size &= ~4096;
 
     if (h) {
       HUnlock(h);
@@ -120,7 +120,6 @@ void AppendText(word length, char *cp) {
       if (_toolErr) return;
       TextHandleSize = size;
     }
-    HLock(h);
   }
   BlockMove(cp, *h + TextHandleUsed, length);
   TextHandleUsed += length;

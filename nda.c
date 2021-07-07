@@ -46,7 +46,6 @@ void NDAResourceShutDown(NDAResourceCookie *cookie);
 Word NDAResourceStartUp(Word memID, Word access, NDAResourceCookie *cookie);
 
 Word MyID;
-Word ipid;
 Word FlagTCP;
 Word ToolsLoaded;
 GrafPortPtr MyWindow;
@@ -395,7 +394,6 @@ pascal word HandleRequest(word request, longword dataIn, longword dataOut) {
 
   if (request == TCPIPSaysNetworkDown) {
     FlagTCP = false;
-    ipid = 0;
     UpdateStatus(true);
   }
   SetCurResourceApp(oldRApp);
@@ -434,7 +432,6 @@ void NDAInit(Word code) {
     ToolsLoaded = false;
 
     MyID = MMStartUp();
-    ipid = 0;
     st = st_none;
   } else {
     if (ToolsLoaded)
@@ -448,6 +445,7 @@ void NDAClose(void) {
 
   AcceptRequests(ReqName, MyID, NULL);
   ConnectionAbort(&connection);
+  st = st_none;
 
   CloseWindow(MyWindow);
   MyWindow = NULL;
@@ -469,6 +467,7 @@ GrafPortPtr NDAOpen(void) {
   TextHandle = NULL;
   TextHandleSize = 0;
   TextHandleSize = 0;
+  st = st_none;
 
   if (!ToolsLoaded) {
     if (NDAStartUpTools(MyID, &ss)) {

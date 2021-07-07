@@ -106,7 +106,7 @@ void AppendText(word length, char *cp) {
   size = TextHandleUsed + length;
   if (size > TextHandleSize) {
     size += 4095;
-    size &= ~4096;
+    size &= ~4095;
 
     if (h) {
       HUnlock(h);
@@ -153,7 +153,7 @@ void SetText(void) {
   longword oldStart, oldEnd;
 
   TESetSelection((Pointer)-1, (Pointer)-1, TECtrlHandle);
-  TESetText(teDataIsTextBox2|teTextIsPtr, (Ref)*TextHandle, TextHandleUsed, NULL, NULL, TECtrlHandle);
+  TESetText(teDataIsTextBox2|teTextIsPtr, (Ref)*TextHandle, TextHandleUsed, 0, NULL, TECtrlHandle);
 
 
   TextHandleUsed = 0;
@@ -540,7 +540,7 @@ void DoDefine(void) {
 
 	handle = (Handle)GetCtlHandleFromID(MyWindow, rCtrlTE);
 
-	TESetText(teDataIsTextBlock, (Ref)"", 0, NULL, NULL, handle);
+	TESetText(teDataIsTextBlock|teTextIsPtr, (Ref)"", 0, 0, NULL, handle);
 
 	GetLETextByID(MyWindow, rCtrlLE, (StringPtr)word_to_define);
 
